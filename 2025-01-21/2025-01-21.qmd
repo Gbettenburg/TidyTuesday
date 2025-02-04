@@ -1,0 +1,74 @@
+---
+title: "Himalayan Tidy Tuesday"
+format: html
+editor: visual
+---
+
+### Set-Up
+
+```{r}
+library(tidyverse)
+
+library(dplyr)
+
+library(ggplot2)
+
+exped_tidy <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-01-21/exped_tidy.csv')
+
+peaks_tidy <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-01-21/peaks_tidy.csv')
+```
+
+### Data Tidying
+
+```{r}
+joined_tidy <- exped_tidy %>% left_join(peaks_tidy, by =c("PEAKID" = "PEAKID"))
+head(joined_tidy)
+
+peaks_exped <- joined_tidy %>% 
+  mutate(Selection_Reason = case_when(
+    TERMREASON == 7 | TERMREASON == 6  ~ "Health Issue",
+    TERMREASON == 4 | TERMREASON == 5  ~ "Environmental Issue",
+    TERMREASON == 11 | TERMREASON == 12  ~ "Abandonment",
+    TERMREASON == 8 | TERMREASON == 9  ~ "Logistical Issue",
+    TERMREASON == 9 ~ "Other",
+    TERMREASON == 10 ~ "Lack of Skill",
+    TERMREASON == 1 | TERMREASON == 2 ~ "Success", 
+    TRUE ~ NA_character_)) 
+
+peaks_exped <- peaks_exped %>%
+  mutate(Selection_Reason = factor(Selection_Reason, 
+                      levels = c("Success", "Environmental Issue", "Logistical Issue",
+                                 "Health Issue", "Lack of Skill", "Abandonment", "Other", as.character(NA)))) %>% filter(Selection_Reason != "Success")
+
+```
+
+### Final Plots
+
+```{r}
+peaks_exped5 %>% 
+ggplot(aes(x = SEASON_FACTOR, fill = Selection_Reason)) + 
+geom_bar(position = "fill") + 
+labs( x= "Season", y= "Relative Frequency", title = "The Relative Frequency of Termination Reasons 
+Other than Success per Season (2020-2024)", fill = "Reason 
+for Termination", caption= "Created by Grace Bettenburg on 02/04/2025") +
+  scale_fill_manual(values=c("forestgreen", 
+                             "orange", 
+                             "red2", 
+                             "cornflowerblue",
+                             "black")) + 
+  theme(axis.text.y = element_blank())
+```
+
+```{r}
+peaks_exped5 %>% 
+ggplot(aes(x = SEASON_FACTOR, fill = Selection_Reason)) + 
+geom_bar(position = "dodge") + 
+labs( x= "Season", y= "Number of Occurances", title = "The Distribution of Termination Reasons 
+Other than Success per Season (2020-2024)", fill = "Reason 
+for Termination", caption= "Created by Grace Bettenburg on 02/04/2025") +
+  scale_fill_manual(values=c("forestgreen", 
+                             "orange", 
+                             "red2", 
+                             "cornflowerblue",
+                             "black"))
+```
