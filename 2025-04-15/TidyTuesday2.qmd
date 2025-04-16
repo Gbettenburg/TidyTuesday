@@ -1,0 +1,43 @@
+---
+title: "TidyTuesday 2"
+format: html
+editor: visual
+---
+
+Read in data
+
+```{r messge = FALSE, echo = FALSE}
+library(tidyverse)
+library(ggplot2)
+
+penguins <- read_csv('penguins.csv')
+penguins_raw <- read_csv('penguins_raw.csv')
+
+```
+
+```{r}
+eggs <- penguins_raw %>%
+  mutate(Egg_Date = ymd(`Date Egg`),
+         Egg_Month = if_else(month(Egg_Date)==11, "November", "December"),
+         Species = str_remove(Species, "\\s*\\(.*?\\)"), 
+         Species = str_replace_all(Species, "\\sp", " P"))
+
+egg_plot <- eggs %>% 
+  ggplot(aes(x = Egg_Month, fill = `Clutch Completion`)) + 
+  geom_bar(color = "black") + 
+  facet_grid(~Species) +
+  scale_fill_manual(values = c("#a7432e", "#00674F"))+
+    labs(
+      title = "Comparing Clutch Completion Counts 
+per Month by Penguin Species", 
+      x = "Month First Egg Was Laid", 
+      fill = "Clutch Completion",
+      y = "Number of Observed Clutches"
+      ) + 
+    theme_bw()
+
+egg_plot 
+
+ggsave("Tidy_Tuesday_Penguins.png", egg_plot)
+  
+```
