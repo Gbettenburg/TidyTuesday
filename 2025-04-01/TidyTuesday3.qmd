@@ -133,7 +133,7 @@ stats_plot <- long_pokemon_stats %>%
   ggplot(aes(x = `Stat Names`, y = Stats, group = type_1, color = type_1)) +
   geom_line() +
   geom_point() +
-  theme_minimal() + 
+  theme_bw() + 
   labs(title = "Comparing Pokemon's Mean Stats by their Primary Type", 
        y = "Stat Points", 
        color = "Pokemon Primary Type", 
