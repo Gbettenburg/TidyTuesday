@@ -1,0 +1,146 @@
+---
+title: "Tidy Tuesday Pokemon 3"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+pokemon <- read_csv("pokemon_df.csv")
+```
+
+```{r}
+
+
+library(tidymodels)
+
+pokemon_LASSO <- pokemon %>%
+  select(height, weight, base_experience, type_1, type_2, hp, attack, defense, special_attack, special_defense, speed, generation_id) %>%
+  mutate(type_2 = if_else(is.na(type_2), "No Second Type", type_2))
+
+lasso_spec <- linear_reg() %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet") %>% 
+  set_args(mixture = 1, penalty = tune())
+
+variable_recipe <- recipe(base_experience ~ ., data = pokemon_LASSO) %>% 
+  step_dummy(all_nominal_predictors()) %>%
+  step_impute_mean(all_numeric_predictors())
+
+lasso_workflow <- workflow() %>% 
+  add_recipe(variable_recipe) %>% 
+  add_model(lasso_spec)
+
+set.seed(212)
+lasso_models <- lasso_workflow %>% 
+  tune_grid(
+    grid = grid_regular(penalty(range = c(-5, 1)), levels = 50),
+    resamples = vfold_cv(pokemon_LASSO, v = 10),
+    metrics = metric_set(mae)
+  )
+
+lasso_models %>% 
+  collect_metrics()
+
+parsimonious_penalty <- lasso_models %>% 
+  select_by_one_std_err(metric = "mae", desc(penalty))
+
+final_lasso_model <- lasso_workflow %>% 
+  finalize_workflow(parameters = parsimonious_penalty) %>% 
+  fit(data = pokemon_LASSO)
+
+final_lasso_model %>% 
+  tidy()
+
+
+```
+
+```{r}
+library(glmnet)
+
+pokemon %>%
+  group_by(type_1) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count))
+
+water_pokemon <- pokemon %>%
+  mutate(water_type = if_else(type_1== "water", 1, 0)) %>%
+  mutate(type_2 = if_else(is.na(type_2), "No Second Type", type_2))%>%
+    select(height, weight, base_experience, water_type, type_2, hp, attack, defense, special_attack, special_defense, speed, generation_id)
+
+lasso_spec <- linear_reg() %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet") %>% 
+  set_args(mixture = 1, penalty = tune())
+
+variable_recipe <- recipe(water_type ~ ., data = water_pokemon) %>% 
+  step_dummy(all_nominal_predictors()) %>%
+  step_impute_mean(all_numeric_predictors())
+
+lasso_workflow <- workflow() %>% 
+  add_recipe(variable_recipe) %>% 
+  add_model(lasso_spec)
+
+set.seed(212)
+lasso_models <- lasso_workflow %>% 
+  tune_grid(
+    grid = grid_regular(penalty(range = c(-5, 1)), levels = 50),
+    resamples = vfold_cv(water_pokemon, v = 10),
+    metrics = metric_set(mae)
+  )
+
+lasso_models %>% 
+  collect_metrics()
+
+parsimonious_penalty <- lasso_models %>% 
+  select_by_one_std_err(metric = "mae", desc(penalty))
+
+final_lasso_model <- lasso_workflow %>% 
+  finalize_workflow(parameters = parsimonious_penalty) %>% 
+  fit(data = water_pokemon)
+
+final_lasso_model %>% 
+  tidy()
+
+
+```
+
+```{r}
+
+pokemon_stats <- pokemon %>%
+  filter(type_1 %in% c("electric", "water", "fire", "grass")) %>%
+  group_by(type_1)%>%
+  summarize("Base Experience" = mean(base_experience), "HP" = mean(hp), "Attack" = mean(attack), "Defense" = mean(defense), "Speed" = mean(speed))
+
+type_colors <- c("gold", "red3", "green3", "steelblue3")
+
+long_pokemon_stats <- pokemon_stats%>%
+  pivot_longer(!type_1, names_to = "Stat Names", values_to = "Stats") %>% 
+  mutate(type_1 = case_when(
+    type_1 == "electric" ~ "Electric",
+    type_1 == "fire" ~ "Fire", 
+    type_1 == "grass" ~ "Grass",
+    type_1 == "water" ~ "Water"
+  ))
+
+long_pokemon_stats$`Stat Names` <- factor(long_pokemon_stats$`Stat Names`,
+                                          levels = c("Base Experience", "HP", "Attack", "Defense", "Speed"))
+head(long_pokemon_stats)
+
+stats_plot <- long_pokemon_stats %>%
+  ggplot(aes(x = `Stat Names`, y = Stats, group = type_1, color = type_1)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() + 
+  labs(title = "Comparing Pokemon's Mean Stats by their Primary Type", 
+       y = "Stat Points", 
+       color = "Pokemon Primary Type", 
+       x = "Stat Type") +
+  scale_color_manual(values = type_colors)
+
+stats_plot 
+
+ggsave("Tidy_Tuesday_Pokemon.png", stats_plot)
+```

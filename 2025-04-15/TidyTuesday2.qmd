@@ -24,9 +24,9 @@ eggs <- penguins_raw %>%
 
 egg_plot <- eggs %>% 
   ggplot(aes(x = Egg_Month, fill = `Clutch Completion`)) + 
-  geom_bar(color = "black") + 
+  geom_bar(color = "gray20") + 
   facet_grid(~Species) +
-  scale_fill_manual(values = c("#a7432e", "#00674F"))+
+  scale_fill_manual(values = c("#a7435b", "darkgreen"))+
     labs(
       title = "Comparing Clutch Completion Counts 
 per Month by Penguin Species", 
