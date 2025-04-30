@@ -1,0 +1,65 @@
+---
+title: "TidyTuesday4"
+format: html
+editor: visual
+---
+
+```{r}
+user2025 <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-04-29/user2025.csv')
+```
+
+```{r}
+library(dplyr)
+library(stringr)
+library(tm)
+library(wordcloud)
+library(SnowballC)
+library(readr)
+
+AI2025 <- user2025 %>% 
+  filter(str_detect(content, "AI")) %>% 
+  select(content)
+
+AI22025 <- user2025 %>% 
+  filter(str_detect(title, "AI")|str_detect(title, "artificial intelligence")) %>% 
+  select(content)
+
+nrow(AI2025)
+nrow(AI22025)
+```
+
+```{r}
+# Collapse all content into a single string
+combined_text <- paste(AI2025$content, collapse = " ")
+
+# Write the single string to a text file
+writeLines(combined_text, "test.txt")
+
+text_data <- read_file("test.txt")
+
+text_corpus <- Corpus(VectorSource(text_data))
+
+# Clean the corpus
+text_corpus <- tm_map(text_corpus, content_transformer(tolower))
+text_corpus <- tm_map(text_corpus, removePunctuation)
+text_corpus <- tm_map(text_corpus, removeWords, stopwords("english"))
+text_corpus <- tm_map(text_corpus, stripWhitespace)
+
+custom_words <- c("will", "use", "can", "used", "using", "also", "across", "without")
+text_corpus <- tm_map(text_corpus, removeWords, custom_words)
+
+# Generate the word cloud
+layout(matrix(c(1, 2), nrow=2), heights=c(1, 4))
+par(mar=rep(0, 4))
+plot.new()
+text(x=0.5, y=0.5, "Worldcloud of the Conference Sessions
+that Discuss AI")
+wordcloud(text_corpus,
+          scale = c(5, 0.5),
+          max.words = 100,
+          random.order = FALSE,
+          rot.per = 0.35,
+          use.r.layout = FALSE,
+          colors = brewer.pal(8, "Dark2"), 
+          main = "Title")
+```
